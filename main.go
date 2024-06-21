@@ -31,10 +31,13 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	buff := make([]byte, 1024)
-	_, err := conn.Read(buff)
-	if err != nil {
-		log.Fatal(err.Error())
+	// Keep reading from the connection perpetually
+	for {
+		buff := make([]byte, 1024)
+		_, err := conn.Read(buff)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		conn.Write([]byte("+OK\r\n"))
 	}
-	conn.Write([]byte("+OK"))
 }
