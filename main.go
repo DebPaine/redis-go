@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 )
@@ -35,6 +36,11 @@ func handleConnection(conn net.Conn) {
 		buff := make([]byte, 1024)
 		_, err := conn.Read(buff)
 		if err != nil {
+			// EOF error occurs when we close the connection, we break from the current infinite loop using break
+			if err == io.EOF {
+				fmt.Println("EOF error")
+				break
+			}
 			log.Fatal(err.Error())
 		}
 		conn.Write([]byte("+OK\r\n"))
