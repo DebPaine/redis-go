@@ -5,9 +5,28 @@ import (
 	"io"
 	"log"
 	"net"
+	"redis-go/resp"
 )
 
 func main() {
+	fmt.Println(resp.ARRAY)
+	// input := "$3\r\nDeb\r\n"
+	// fmt.Println(input[:8])
+	// reader := bufio.NewReader(strings.NewReader(input))
+	// b, err := reader.ReadByte()
+	// fmt.Println("Type", string(b))
+	//
+	// size, _ := reader.ReadByte()
+	// strSize, _ := strconv.ParseInt(string(size), 10, 64)
+	// fmt.Println("Size", strSize)
+	//
+	// reader.ReadByte()
+	// reader.ReadByte()
+	//
+	// buff := make([]byte, size)
+	// reader.Read(buff)
+	// fmt.Println("Text", string(buff))
+
 	// Listen on TCP port 6379
 	listener, err := net.Listen("tcp", ":6379")
 	if err != nil {
@@ -24,6 +43,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+		// Handle the new connection logic using a new goroutine
 		go handleConnection(conn)
 	}
 }
