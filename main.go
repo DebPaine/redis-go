@@ -1,18 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"redis-go/resp"
+	"strings"
 )
 
 func main() {
-	fmt.Println(resp.ARRAY)
-	// input := "$3\r\nDeb\r\n"
-	// fmt.Println(input[:8])
-	// reader := bufio.NewReader(strings.NewReader(input))
+	input := "$3\r\nDeb\r\n"
+	reader := bufio.NewReader(strings.NewReader(input))
+	b, err := reader.ReadString('\n')
+	fmt.Println(b[:len(b)-2])
+	b, err = reader.ReadString('\n')
+	fmt.Println(b[:len(b)-2])
 	// b, err := reader.ReadByte()
 	// fmt.Println("Type", string(b))
 	//
@@ -53,16 +56,24 @@ func handleConnection(conn net.Conn) {
 
 	// Keep reading from the connection perpetually
 	for {
-		buff := make([]byte, 1024)
-		_, err := conn.Read(buff)
+		rsp := resp.NewResp(conn)
+		value, err := rsp.Read()
 		if err != nil {
-			// EOF error occurs when we close the connection, we break from the current infinite loop using break
-			if err == io.EOF {
-				fmt.Println("EOF error")
-				break
-			}
-			log.Fatal(err.Error())
+			log.Fatalln(err.Error())
 		}
+
+		fmt.Println(value)
 		conn.Write([]byte("+OK\r\n"))
+		// buff := make([]byte, 1024)
+		// _, err := conn.Read(buff)
+		// if err != nil {
+		// 	// EOF error occurs when we close the connection, we break from the current infinite loop using break
+		// 	if err == io.EOF {
+		// 		fmt.Println("EOF error")
+		// 		break
+		// 	}
+		// 	log.Fatal(err.Error())
+		// }
+		// conn.Write([]byte("+OK\r\n"))
 	}
 }
