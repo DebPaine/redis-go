@@ -35,27 +35,8 @@ func NewResp(rd io.Reader) *Resp {
 	return &Resp{reader: bufio.NewReader(rd)}
 }
 
-// func (r *Resp) Read() (Value, error) {
-// 	// eg: $5\r\nhello\r\n
-// 	_type, err := r.reader.ReadByte()
-// 	if err != nil {
-// 		log.Fatalln(err.Error())
-// 	}
-//
-// 	switch _type {
-// 	case ARRAY:
-//
-// 	case BULK:
-// 	default:
-// 		fmt.Printf("Unknown type: %v", string(_type))
-// 		return Value{}, nil
-// 	}
-// }
-
 func (r *Resp) Read() (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
-	v := Value{}
-
 	for {
 		// line is the string till \r\n, which is *2 in the first iteration
 		line, err := r.reader.ReadString('\n')
@@ -73,28 +54,41 @@ func (r *Resp) Read() (Value, error) {
 
 		switch _type {
 		case ARRAY:
-			v.inputType = "array"
-			arrayLength, err := strconv.Atoi(line[1:])
+			v, err := r.readArray(line)
 			if err != nil {
 				return Value{}, err
 			}
-
-			// we are iterating till arrayLength since we have that many elements in the array
-			for i := 0; i < arrayLength; i++ {
-				value, err := r.readBulkString()
-				if err != nil {
-					return Value{}, err
-				}
-
-				v.array = append(v.array, value)
-			}
+			return v, err
+		default:
+			return Value{}, fmt.Errorf("Unexpected type: %s", _type)
 		}
+	}
+	return Value{}, nil
+}
+
+func (r *Resp) readArray(line string) (Value, error) {
+	v := Value{}
+	v.inputType = "array"
+
+	arrayLength, err := strconv.Atoi(line[1:])
+	if err != nil {
+		return Value{}, err
+	}
+
+	// we are iterating till arrayLength since we have that many elements in the array
+	for i := 0; i < arrayLength; i++ {
+		value, err := r.readBulkString()
+		if err != nil {
+			return Value{}, err
+		}
+
+		v.array = append(v.array, value)
 	}
 	return v, nil
 }
 
 func (r *Resp) readBulkString() (Value, error) {
-	// eg: $5\r\nhello
+	// eg: $5\r\nhello\r\n
 	v := Value{}
 
 	// Read the bytes till \n
@@ -110,7 +104,7 @@ func (r *Resp) readBulkString() (Value, error) {
 	if _type != BULK {
 		return Value{}, fmt.Errorf("Expected %v, got %v", BULK, _type)
 	}
-	v.inputType = _type
+	v.inputType = "bulk"
 
 	// Convert the length of the string to int
 	lineLength, err := strconv.Atoi(line[1:])
@@ -127,34 +121,11 @@ func (r *Resp) readBulkString() (Value, error) {
 	}
 	v.bulk = string(bulkString)
 
+	// eg: $5\r\nhello\r\n, after reading "hello" we have to read \r\n too so that we can move to the next bulkstring
+	_, err = r.reader.ReadString('\n')
+	if err != nil {
+		return Value{}, err
+	}
+
 	return v, nil
 }
-
-// func (r *Resp) readLine() (line []byte, n int, err error){
-//   // Keep reading byte by byte till we reach \r\n and stop before that
-//   // eg: $5\r\nhello\r\n, here we will only read till $5 then return
-// 	for {
-//     b, err := r.reader.ReadByte()
-//     if err != nil {
-//       return nil, 0, err  // nil is a valid return value for a slice
-//     }
-//     if b == '\r' {
-//       break
-//     }
-//     n += 1
-//     line = append(line, b)
-//   }
-//   return line, n, nil
-// }
-//
-// func (r *Resp) readInteger() (x int, n int, err error){
-//   line, n, err := r.readLine()
-// 	if err != nil {
-//     return 0, 0, err
-//   }
-//   i64, err := strconv.ParseInt(string(line), 10, 64)
-//   if err != nil {
-//     return 0, n, err
-//   }
-//   return int(i64), n, nil
-// }
