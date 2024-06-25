@@ -8,6 +8,42 @@ import (
 	"strings"
 )
 
+/*
+In this read.go file, we deserialize the user input and parse the commands which follows RESP standards. Here, we are only accepting arrays and bulkstrings from user input.
+Here is how it works:
+1. We use the Read method to parse and see if it's an array type or not.
+2. If it's an array type, we then parse it further using readArray method.
+3. We further parse it in readArray method and then check if we have bulkstrings or not.
+4. If yes, we then further parse the bulkstrings using readBulkString method.
+5. We save the result of all this in Value struct.
+
+Initially, the Value struct will be empty. As we parse the input further, we keep adding updating the necessary fields in the Value struct according to the user input. If we have
+an array input, then we also update the array field in Value, which itself is of Value type. Here is how Value struct will look like once a user input is parsed:
+
+User input:
+set hello world
+
+RESP representation of input:
+*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+
+Parsed input:
+{array  0  [{bulk  0 set []} {bulk  0 hello []} {bulk  0 world []}]}
+
+Parsed input with Value struct fields with values:
+Value{
+      inputType: "array",
+      str: "",
+      num: 0,
+      bulk: "",
+      array: [
+              Value{inputType: "bulk", str: "", num: 0, bulk: "hello", array: []},
+              Value{inputType: "bulk", str: "", num: 0, bulk: "world", array: []}
+            ]
+    }
+
+As you can see, the parsed input is Value struct with updated array field. The array field has multiple Value structs each of "bulk" string type.
+*/
+
 const (
 	STRING  = "+"
 	ERROR   = "-"
@@ -18,11 +54,11 @@ const (
 
 // Value struct will hold the command entered by the user
 type Value struct {
-	inputType string
-	str       string
-	num       int
-	bulk      string
-	array     []Value
+	inputType string  // type of input, eg: array, bulkstring, simplestring, integer
+	str       string  // simple strings
+	num       int     // integer values
+	bulk      string  // bulk strings
+	array     []Value // array values
 }
 
 type Resp struct {
@@ -111,7 +147,6 @@ func (r *Resp) readBulkString() (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
-	v.num = lineLength
 
 	// Get the actual data in the bulk string
 	bulkString := make([]byte, lineLength)
