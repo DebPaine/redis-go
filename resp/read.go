@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
-	// "strconv"
 )
 
 const (
@@ -20,20 +18,20 @@ const (
 
 // Value struct will hold the command entered by the user
 type Value struct {
-  inputType string
-  str       string
+	inputType string
+	str       string
 	num       int
-  bulk      string
-  array     []Value
+	bulk      string
+	array     []Value
 }
 
 type Resp struct {
-  reader *bufio.Reader
+	reader *bufio.Reader
 	writer *bufio.Writer
 }
 
 func NewResp(rd io.Reader) *Resp {
-  // bufio.NewReader returns a pointer, hence "reader" field is of type *bufio.Reader 
+	// bufio.NewReader returns a pointer, hence "reader" field is of type *bufio.Reader
 	return &Resp{reader: bufio.NewReader(rd)}
 }
 
@@ -57,7 +55,6 @@ func NewResp(rd io.Reader) *Resp {
 func (r *Resp) Read() (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
 	v := Value{}
-	v.inputType = "array"
 
 	for {
 		// line is the string till \r\n, which is *2 in the first iteration
@@ -73,13 +70,16 @@ func (r *Resp) Read() (Value, error) {
 		}
 
 		_type := string(line[0])
+
 		switch _type {
 		case ARRAY:
+			v.inputType = "array"
 			arrayLength, err := strconv.Atoi(line[1:])
 			if err != nil {
 				return Value{}, err
 			}
 
+			// we are iterating till arrayLength since we have that many elements in the array
 			for i := 0; i < arrayLength; i++ {
 				value, err := r.readBulkString()
 				if err != nil {
@@ -94,7 +94,40 @@ func (r *Resp) Read() (Value, error) {
 }
 
 func (r *Resp) readBulkString() (Value, error) {
-	return Value{}, nil
+	// eg: $5\r\nhello
+	v := Value{}
+
+	// Read the bytes till \n
+	line, err := r.reader.ReadString('\n')
+	if err != nil {
+		return Value{}, err
+	}
+
+	// Remove empty spaces like \r\n
+	line = strings.TrimSpace(line)
+	// Get the first byte which is the type
+	_type := string(line[0])
+	if _type != BULK {
+		return Value{}, fmt.Errorf("Expected %v, got %v", BULK, _type)
+	}
+	v.inputType = _type
+
+	// Convert the length of the string to int
+	lineLength, err := strconv.Atoi(line[1:])
+	if err != nil {
+		return Value{}, err
+	}
+	v.num = lineLength
+
+	// Get the actual data in the bulk string
+	bulkString := make([]byte, lineLength)
+	_, err = r.reader.Read(bulkString)
+	if err != nil {
+		return Value{}, err
+	}
+	v.bulk = string(bulkString)
+
+	return v, nil
 }
 
 // func (r *Resp) readLine() (line []byte, n int, err error){
