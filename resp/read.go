@@ -63,7 +63,6 @@ type Value struct {
 
 type Resp struct {
 	reader *bufio.Reader
-	writer *bufio.Writer
 }
 
 func NewResp(rd io.Reader) *Resp {
