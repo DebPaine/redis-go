@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -56,7 +57,7 @@ func main() {
 		// This will block till a new connection is received
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatal(err.Error())
+			fmt.Println(err)
 		}
 		// Handle the new connection logic using a new goroutine
 		go handleConnection(conn)
@@ -66,16 +67,18 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	reader := bufio.NewReader(conn)
+	// writer := bufio.NewWriter(conn)
+
 	// Keep reading from the connection perpetually
 	for {
-		rsp := resp.NewResp(conn)
-		// value will be of Value struct, which will have values in it's array field
-		value, err := rsp.Read()
+		// command will be of Value struct, which will have values in it's array field
+		command, err := resp.ReadResp(reader)
 		if err != nil {
-			log.Fatalln(err.Error())
+			fmt.Println(err)
 		}
 
-		fmt.Println(value)
+		fmt.Println(command)
 		conn.Write([]byte("+OK\r\n"))
 	}
 }

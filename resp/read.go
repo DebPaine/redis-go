@@ -3,7 +3,6 @@ package resp
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 )
@@ -56,25 +55,19 @@ const (
 type Value struct {
 	inputType string  // type of input, eg: array, bulkstring, simplestring, integer
 	str       string  // simple strings
-	num       int     // integer values
+	integer   int     // integer values
 	bulk      string  // bulk strings
 	array     []Value // array values
+	err       error   // error values
 }
 
-type Resp struct {
-	reader *bufio.Reader
-}
-
-func NewResp(rd io.Reader) *Resp {
-	// bufio.NewReader returns a pointer, hence "reader" field is of type *bufio.Reader
-	return &Resp{reader: bufio.NewReader(rd)}
-}
-
-func (r *Resp) Read() (Value, error) {
+// type R
+func ReadResp(r *bufio.Reader) (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+
 	for {
 		// line is the string till \r\n, which is *2 in the first iteration
-		line, err := r.reader.ReadString('\n')
+		line, err := r.ReadString('\n')
 		if err != nil {
 			return Value{}, err
 		}
@@ -88,12 +81,18 @@ func (r *Resp) Read() (Value, error) {
 		_type := string(line[0])
 
 		switch _type {
+		case STRING:
+			return readString(line)
+		case INTEGER:
+			return readInteger(line)
 		case ARRAY:
-			v, err := r.readArray(line)
-			if err != nil {
-				return Value{}, err
-			}
-			return v, err
+			return readArray(r, line)
+		case BULK:
+			return readBulkString(
+				r,
+			) // we need to send the reader in the function as just sending the line won't be enough since there are multiple \r\n in a bulkstring
+		case ERROR:
+			return readError(line)
 		default:
 			return Value{}, fmt.Errorf("Unexpected type: %s", _type)
 		}
@@ -101,18 +100,39 @@ func (r *Resp) Read() (Value, error) {
 	return Value{}, nil
 }
 
-func (r *Resp) readArray(line string) (Value, error) {
-	v := Value{}
-	v.inputType = "array"
+func readString(s string) (Value, error) {
+	// eg:  +OK\r\n
+	return Value{inputType: "string", str: s[1:]}, nil
+}
 
-	arrayLength, err := strconv.Atoi(line[1:])
+func readInteger(s string) (Value, error) {
+	// eg:  :1000\r\n
+	integer, err := strconv.Atoi(s[1:])
 	if err != nil {
-		return Value{}, err
+		fmt.Println(err)
+	}
+
+	return Value{inputType: "int", integer: integer}, nil
+}
+
+func readError(line string) (Value, error) {
+	// eg: -Error message\r\n
+	return Value{inputType: "error", err: fmt.Errorf(line[1:])}, nil
+}
+
+func readArray(r *bufio.Reader, line string) (Value, error) {
+	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+
+	v := Value{inputType: "array"}
+
+	length, err := strconv.Atoi(line[1:])
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	// we are iterating till arrayLength since we have that many elements in the array
-	for i := 0; i < arrayLength; i++ {
-		value, err := r.readBulkString()
+	for i := 0; i < length; i++ {
+		value, err := ReadResp(r)
 		if err != nil {
 			return Value{}, err
 		}
@@ -122,24 +142,18 @@ func (r *Resp) readArray(line string) (Value, error) {
 	return v, nil
 }
 
-func (r *Resp) readBulkString() (Value, error) {
+func readBulkString(r *bufio.Reader) (Value, error) {
 	// eg: $5\r\nhello\r\n
-	v := Value{}
+	v := Value{inputType: "bulk"}
 
 	// Read the bytes till \n
-	line, err := r.reader.ReadString('\n')
+	line, err := r.ReadString('\n')
 	if err != nil {
 		return Value{}, err
 	}
 
 	// Remove empty spaces like \r\n
 	line = strings.TrimSpace(line)
-	// Get the first byte which is the type
-	_type := string(line[0])
-	if _type != BULK {
-		return Value{}, fmt.Errorf("Expected %v, got %v", BULK, _type)
-	}
-	v.inputType = "bulk"
 
 	// Convert the length of the string to int
 	lineLength, err := strconv.Atoi(line[1:])
@@ -149,14 +163,15 @@ func (r *Resp) readBulkString() (Value, error) {
 
 	// Get the actual data in the bulk string
 	bulkString := make([]byte, lineLength)
-	_, err = r.reader.Read(bulkString)
+	_, err = r.Read(bulkString)
 	if err != nil {
 		return Value{}, err
 	}
+
 	v.bulk = string(bulkString)
 
 	// eg: $5\r\nhello\r\n, after reading "hello" we have to read \r\n too so that we can move to the next bulkstring
-	_, err = r.reader.ReadString('\n')
+	_, err = r.ReadString('\n')
 	if err != nil {
 		return Value{}, err
 	}
