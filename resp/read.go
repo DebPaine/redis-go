@@ -30,13 +30,13 @@ Parsed input:
 
 Parsed input with Value struct fields with values:
 Value{
-      inputType: "array",
+      typ: "array",
       str: "",
       num: 0,
       bulk: "",
       array: [
-              Value{inputType: "bulk", str: "", num: 0, bulk: "hello", array: []},
-              Value{inputType: "bulk", str: "", num: 0, bulk: "world", array: []}
+              Value{typ: "bulk", str: "", num: 0, bulk: "hello", array: []},
+              Value{typ: "bulk", str: "", num: 0, bulk: "world", array: []}
             ]
     }
 
@@ -53,12 +53,12 @@ const (
 
 // Value struct will hold the command entered by the user
 type Value struct {
-	inputType string  // type of input, eg: array, bulkstring, simplestring, integer
-	str       string  // simple strings
-	integer   int     // integer values
-	bulk      string  // bulk strings
-	array     []Value // array values
-	err       error   // error values
+	typ     string  // type of input, eg: array, bulkstring, simplestring, integer
+	str     string  // simple strings
+	integer int     // integer values
+	bulk    string  // bulk strings
+	array   []Value // array values
+	err     error   // error values
 }
 
 func ReadResp(r *bufio.Reader) (Value, error) {
@@ -102,7 +102,7 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 
 func readString(s string) (Value, error) {
 	// eg:  +OK\r\n
-	return Value{inputType: "string", str: s[1:]}, nil
+	return Value{typ: "string", str: s[1:]}, nil
 }
 
 func readInteger(s string) (Value, error) {
@@ -113,18 +113,18 @@ func readInteger(s string) (Value, error) {
 		return Value{}, err
 	}
 
-	return Value{inputType: "int", integer: integer}, nil
+	return Value{typ: "int", integer: integer}, nil
 }
 
 func readError(line string) (Value, error) {
 	// eg: -Error message\r\n
-	return Value{inputType: "error", err: fmt.Errorf(line[1:])}, nil
+	return Value{typ: "error", err: fmt.Errorf(line[1:])}, nil
 }
 
 func readArray(r *bufio.Reader, line string) (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
 
-	v := Value{inputType: "array"}
+	v := Value{typ: "array"}
 
 	length, err := strconv.Atoi(line[1:])
 	if err != nil {
@@ -145,7 +145,7 @@ func readArray(r *bufio.Reader, line string) (Value, error) {
 
 func readBulkString(r *bufio.Reader, line string) (Value, error) {
 	// eg: $5\r\nhello\r\n
-	v := Value{inputType: "bulk"}
+	v := Value{typ: "bulk"}
 
 	// Convert the length of the string to int
 	length, err := strconv.Atoi(line[1:])
