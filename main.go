@@ -76,6 +76,7 @@ func handleConnection(conn net.Conn) {
 		command, err := resp.ReadResp(reader)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 
 		fmt.Println(command)

@@ -61,7 +61,6 @@ type Value struct {
 	err       error   // error values
 }
 
-// type R
 func ReadResp(r *bufio.Reader) (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
 
@@ -90,6 +89,7 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 		case BULK:
 			return readBulkString(
 				r,
+				line,
 			) // we need to send the reader in the function as just sending the line won't be enough since there are multiple \r\n in a bulkstring
 		case ERROR:
 			return readError(line)
@@ -109,7 +109,8 @@ func readInteger(s string) (Value, error) {
 	// eg:  :1000\r\n
 	integer, err := strconv.Atoi(s[1:])
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Integer conversion error: ", err)
+		return Value{}, err
 	}
 
 	return Value{inputType: "int", integer: integer}, nil
@@ -127,9 +128,9 @@ func readArray(r *bufio.Reader, line string) (Value, error) {
 
 	length, err := strconv.Atoi(line[1:])
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Array length error: ", err)
+		return Value{}, err
 	}
-
 	// we are iterating till arrayLength since we have that many elements in the array
 	for i := 0; i < length; i++ {
 		value, err := ReadResp(r)
@@ -142,27 +143,19 @@ func readArray(r *bufio.Reader, line string) (Value, error) {
 	return v, nil
 }
 
-func readBulkString(r *bufio.Reader) (Value, error) {
+func readBulkString(r *bufio.Reader, line string) (Value, error) {
 	// eg: $5\r\nhello\r\n
 	v := Value{inputType: "bulk"}
 
-	// Read the bytes till \n
-	line, err := r.ReadString('\n')
-	if err != nil {
-		return Value{}, err
-	}
-
-	// Remove empty spaces like \r\n
-	line = strings.TrimSpace(line)
-
 	// Convert the length of the string to int
-	lineLength, err := strconv.Atoi(line[1:])
+	length, err := strconv.Atoi(line[1:])
 	if err != nil {
+		fmt.Println("Bulkstring length error: ", err)
 		return Value{}, err
 	}
 
 	// Get the actual data in the bulk string
-	bulkString := make([]byte, lineLength)
+	bulkString := make([]byte, length)
 	_, err = r.Read(bulkString)
 	if err != nil {
 		return Value{}, err
