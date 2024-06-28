@@ -51,6 +51,9 @@ const (
 	ARRAY   = "*"
 )
 
+// Value struct gives us a structured data type to all the necessary info about a user command. It allows us to work with it in a structured
+// way and add methods to it, as compared to working with different data types like string, int, array etc. This helps in structuring our code
+// better and helping in code clarity. We encapsulate logic to marshal, read, and write and this helps us to make code modular and maintainable.
 // Value struct will hold the command entered by the user
 type Value struct {
 	typ     string  // type of input, eg: array, bulkstring, simplestring, integer
