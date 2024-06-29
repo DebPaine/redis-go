@@ -56,20 +56,20 @@ const (
 // better and helping in code clarity. We encapsulate logic to marshal, read, and write and this helps us to make code modular and maintainable.
 // Value struct will hold the command entered by the user
 type Value struct {
-	typ     string  // type of input, eg: array, bulkstring, simplestring, integer
-	str     string  // simple strings
-	integer int     // integer values
-	bulk    string  // bulk strings
-	array   []Value // array values
-	err     error   // error values
+	Typ     string  // type of input, eg: array, bulkstring, simplestring, integer
+	Str     string  // simple strings
+	Integer int     // integer values
+	Bulk    string  // bulk strings
+	Array   []Value // array values
+	Err     error   // error values
 }
 
 func ReadResp(r *bufio.Reader) (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
-
 	for {
 		// line is the string till \r\n, which is *2 in the first iteration
 		line, err := r.ReadString('\n')
+		// fmt.Println(line)
 		if err != nil {
 			return Value{}, err
 		}
@@ -81,6 +81,7 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 		}
 
 		_type := string(line[0])
+		fmt.Println(_type)
 
 		switch _type {
 		case STRING:
@@ -88,6 +89,7 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 		case INTEGER:
 			return readInteger(line)
 		case ARRAY:
+			fmt.Println("Entered array")
 			return readArray(r, line)
 		case BULK:
 			return readBulkString(
@@ -105,7 +107,7 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 
 func readString(s string) (Value, error) {
 	// eg:  +OK\r\n
-	return Value{typ: "string", str: s[1:]}, nil
+	return Value{Typ: "string", Str: s[1:]}, nil
 }
 
 func readInteger(s string) (Value, error) {
@@ -116,18 +118,18 @@ func readInteger(s string) (Value, error) {
 		return Value{}, err
 	}
 
-	return Value{typ: "int", integer: integer}, nil
+	return Value{Typ: "int", Integer: integer}, nil
 }
 
 func readError(line string) (Value, error) {
 	// eg: -Error message\r\n
-	return Value{typ: "error", err: fmt.Errorf(line[1:])}, nil
+	return Value{Typ: "error", Err: fmt.Errorf(line[1:])}, nil
 }
 
 func readArray(r *bufio.Reader, line string) (Value, error) {
 	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
 
-	v := Value{typ: "array"}
+	v := Value{Typ: "array"}
 
 	length, err := strconv.Atoi(line[1:])
 	if err != nil {
@@ -141,14 +143,14 @@ func readArray(r *bufio.Reader, line string) (Value, error) {
 			return Value{}, err
 		}
 
-		v.array = append(v.array, value)
+		v.Array = append(v.Array, value)
 	}
 	return v, nil
 }
 
 func readBulkString(r *bufio.Reader, line string) (Value, error) {
 	// eg: $5\r\nhello\r\n
-	v := Value{typ: "bulk"}
+	v := Value{Typ: "bulk"}
 
 	// Convert the length of the string to int
 	length, err := strconv.Atoi(line[1:])
@@ -164,7 +166,7 @@ func readBulkString(r *bufio.Reader, line string) (Value, error) {
 		return Value{}, err
 	}
 
-	v.bulk = string(bulkString)
+	v.Bulk = string(bulkString)
 
 	// eg: $5\r\nhello\r\n, after reading "hello" we have to read \r\n too so that we can move to the next bulkstring
 	_, err = r.ReadString('\n')

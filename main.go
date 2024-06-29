@@ -67,19 +67,22 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	reader := bufio.NewReader(conn)
-	// writer := bufio.NewWriter(conn)
+	reader := bufio.NewReader(conn) // read from the open TCP connection
+	writer := bufio.NewWriter(conn) // write to the open TCP connection
 
 	// Keep reading from the connection perpetually
 	for {
-		// command will be of Value struct, which will have values in it's array field
-		command, err := resp.ReadResp(reader)
+		// response will be of Value struct, which will have values in it's array field
+		response, err := resp.ReadResp(reader)
+		fmt.Println(response)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing RESP: ", err)
 			return
 		}
 
-		fmt.Println(command)
-		conn.Write([]byte("+OK\r\n"))
+		err = resp.WriteResp(writer, response)
+		if err != nil {
+			fmt.Println("Error writing RESP :", err)
+		}
 	}
 }

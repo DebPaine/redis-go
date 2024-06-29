@@ -5,5 +5,5 @@ var handlers = map[string]func([]Value) Value{
 }
 
 func ping(_ []Value) Value {
-	return Value{typ: "string", str: "PONG"}
+	return Value{Typ: "string", Str: "PONG"}
 }
