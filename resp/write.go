@@ -28,6 +28,7 @@ func (v *Value) Marshal() ([]byte, error) {
 	case "bulk":
 		return v.marshalBulkString()
 	case "array":
+		return v.marshalArray()
 	case "int":
 	case "null":
 	case "error":
@@ -45,4 +46,19 @@ func (v *Value) marshalString() ([]byte, error) {
 func (v *Value) marshalBulkString() ([]byte, error) {
 	// eg: $5\r\nhello\r\n
 	return []byte(BULK + string(len(v.bulk)) + "\r\n" + v.bulk + "\r\n"), nil
+}
+
+func (v *Value) marshalArray() ([]byte, error) {
+	// eg: *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+	result := []byte(ARRAY + string(len(v.array)) + "\r\n")
+
+	for _, value := range v.array {
+		b, err := value.Marshal()
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, b...)
+	}
+	return result, nil
 }
