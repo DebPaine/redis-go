@@ -58,6 +58,7 @@ func main() {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		// Handle the new connection logic using a new goroutine
 		go handleConnection(conn)
@@ -80,9 +81,11 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 
-		err = resp.WriteResp(writer, response)
-		if err != nil {
-			fmt.Println("Error writing RESP :", err)
-		}
+		writer.Write([]byte("+OK\r\n"))
+		writer.Flush()
+		// err = resp.WriteResp(writer, response)
+		// if err != nil {
+		// 	fmt.Println("Error writing RESP :", err)
+		// }
 	}
 }

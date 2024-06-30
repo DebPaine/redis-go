@@ -81,7 +81,6 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 		}
 
 		_type := string(line[0])
-		fmt.Println(_type)
 
 		switch _type {
 		case STRING:
@@ -89,7 +88,6 @@ func ReadResp(r *bufio.Reader) (Value, error) {
 		case INTEGER:
 			return readInteger(line)
 		case ARRAY:
-			fmt.Println("Entered array")
 			return readArray(r, line)
 		case BULK:
 			return readBulkString(
@@ -173,6 +171,5 @@ func readBulkString(r *bufio.Reader, line string) (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
-
 	return v, nil
 }
