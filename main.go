@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"redis-go/resp"
 )
@@ -81,11 +82,19 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 
-		writer.Write([]byte("+OK\r\n"))
-		writer.Flush()
-		// err = resp.WriteResp(writer, response)
-		// if err != nil {
-		// 	fmt.Println("Error writing RESP :", err)
-		// }
+		// {array  0  [{bulk  0 set [] <nil>} {bulk  0 hello [] <nil>} {bulk  0 world [] <nil>}] <nil>}
+		command, args := strings.ToUpper(response.Array[0].Bulk), response.Array[1:]
+		handler, ok := resp.CommandHandler[command]
+		if !ok {
+			fmt.Println("Command not found")
+			return
+		}
+
+		response = handler(args)
+
+		err = resp.WriteResp(writer, response)
+		if err != nil {
+			fmt.Println("Error writing RESP :", err)
+		}
 	}
 }

@@ -1,9 +1,12 @@
 package resp
 
-var handlers = map[string]func([]Value) Value{
+var CommandHandler = map[string]func([]Value) Value{
 	"PING": ping,
 }
 
-func ping(_ []Value) Value {
-	return Value{Typ: "string", Str: "PONG"}
+func ping(args []Value) Value {
+	if len(args) == 0 {
+		return Value{Typ: "string", Str: "PONG"}
+	}
+	return Value{Typ: "string", Str: args[0].Bulk}
 }
