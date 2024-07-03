@@ -75,21 +75,18 @@ func handleConnection(conn net.Conn) {
 	for {
 		// response will be of Value struct, which will have values in it's array field
 		response, err := resp.ReadResp(reader)
-		fmt.Println(response)
 		if err != nil {
 			fmt.Println("Error parsing RESP: ", err)
 			return
 		}
+		fmt.Println(response)
 
-		response, err = resp.ExecuteCommand(response)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		response = resp.ExecuteCommand(response)
 
 		err = resp.WriteResp(writer, response)
 		if err != nil {
-			fmt.Println("Error writing RESP :", err)
+			fmt.Println("Error writing RESP: ", err)
+			return
 		}
 	}
 }
