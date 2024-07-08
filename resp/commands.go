@@ -49,6 +49,8 @@ func ExecuteCommand(v Value) Value {
 		return hset(args)
 	case "hget":
 		return hget(args)
+	case "hgetall":
+		return hgetall(args)
 	default:
 		return Value{Typ: "null"}
 	}
@@ -141,4 +143,29 @@ func hget(args []Value) Value {
 	}
 
 	return Value{Typ: "bulk", Bulk: value}
+}
+
+func hgetall(args []Value) Value {
+	if len(args) != 1 {
+		return Value{
+			Typ: "error",
+			Err: fmt.Errorf("Incorrect no. of arguments for HGETALL operation"),
+		}
+	}
+
+	key := args[0].Bulk
+
+	hsetRWMutex.RLock()
+	pairs, ok := hsetMap[key]
+	hsetRWMutex.RUnlock()
+	if !ok {
+		return Value{Typ: "null"}
+	}
+
+	values := []Value{}
+	for key, value := range pairs {
+		values = append(values, Value{Typ: "bulk", Bulk: fmt.Sprintf("%v: %v", key, value)})
+	}
+
+	return Value{Typ: "array", Array: values}
 }
