@@ -22,11 +22,13 @@ Explanation:
 If an RLock (read lock) is held by any goroutine, a Lock (write lock) cannot be acquired by another goroutine. This is one of the fundamental properties of sync.RWMutex in Go: read locks and write locks are mutually exclusive to ensure data consistency.
 */
 
+// store and retrieve {key: value} pairs using a hashmap
 var (
 	setMap     = map[string]string{}
 	setRWMutex = sync.RWMutex{}
 )
 
+// store and retrieve {key1: {key2: value}} pairs using a hashmap of hashmap
 var (
 	hsetMap     = map[string]map[string]string{}
 	hsetRWMutex = sync.RWMutex{}
