@@ -23,8 +23,13 @@ If an RLock (read lock) is held by any goroutine, a Lock (write lock) cannot be 
 */
 
 var (
-	setMap  = map[string]string{}
-	rwMutex = sync.RWMutex{}
+	setMap     = map[string]string{}
+	setRWMutex = sync.RWMutex{}
+)
+
+var (
+	hsetMap     = map[string]map[string]string{}
+	hsetRWMutex = sync.RWMutex{}
 )
 
 func ExecuteCommand(v Value) Value {
@@ -38,6 +43,10 @@ func ExecuteCommand(v Value) Value {
 		return set(args)
 	case "get":
 		return get(args)
+	case "hset":
+		return hset(args)
+	case "hget":
+		return hget(args)
 	default:
 		return Value{Typ: "null"}
 	}
@@ -62,9 +71,9 @@ func set(args []Value) Value {
 	key := args[0].Bulk
 	value := args[1].Bulk
 
-	rwMutex.Lock()
+	setRWMutex.Lock()
 	setMap[key] = value
-	rwMutex.Unlock()
+	setRWMutex.Unlock()
 
 	return Value{Typ: "string", Str: "OK"}
 }
@@ -79,12 +88,55 @@ func get(args []Value) Value {
 
 	key := args[0].Bulk
 
-	rwMutex.RLock()
+	setRWMutex.RLock()
 	value, ok := setMap[key]
+	setRWMutex.RUnlock()
 	if !ok {
 		return Value{Typ: "null"}
 	}
-	rwMutex.RUnlock()
+
+	return Value{Typ: "bulk", Bulk: value}
+}
+
+func hset(args []Value) Value {
+	if len(args) != 3 {
+		return Value{
+			Typ: "error",
+			Err: fmt.Errorf("Incorrect no. of arguments for HSET operation"),
+		}
+	}
+
+	key1 := args[0].Bulk
+	key2 := args[1].Bulk
+	value := args[2].Bulk
+
+	hsetRWMutex.Lock()
+	if _, ok := hsetMap[key1]; !ok {
+		hsetMap[key1] = map[string]string{}
+	}
+	hsetMap[key1][key2] = value
+	hsetRWMutex.Unlock()
+
+	return Value{Typ: "string", Str: "OK"}
+}
+
+func hget(args []Value) Value {
+	if len(args) != 2 {
+		return Value{
+			Typ: "error",
+			Err: fmt.Errorf("Incorrect no. of arguments for HGET operation"),
+		}
+	}
+
+	key1 := args[0].Bulk
+	key2 := args[1].Bulk
+
+	hsetRWMutex.RLock()
+	value, ok := hsetMap[key1][key2]
+	hsetRWMutex.RUnlock()
+	if !ok {
+		return Value{Typ: "null"}
+	}
 
 	return Value{Typ: "bulk", Bulk: value}
 }
